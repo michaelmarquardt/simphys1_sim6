@@ -1,5 +1,6 @@
 #include <gsl/gsl_rng.h>
 #include <stdlib.h>
+#include <math.h>
 
 gsl_rng *r = NULL;
 
@@ -25,3 +26,21 @@ void c_random_list(long N, double* rs) {
   for (i = 0; i < N; i++)
     rs[i] = gsl_rand();
 }
+
+/* Spin flip*/
+void c_spin_flip(double beta, long L, double* E, double* mu, int* sigma) {
+    long V = L*L;
+    for (long step=0; step<V; step++) {
+        // k = i + j*L   =>   i = k%L   j = k//L
+        long k = gsl_randint(V);
+        // Test deltaE before flipping spin
+        int deltaE = 2*sigma[k]*(sigma[k/L*L+(k+1+L)%L]+sigma[k/L*L+(k-1+L)%L]+sigma[(k+L+V)%V]+sigma[(k-L+V)%V]);
+        if (gsl_rand() < exp(-beta*deltaE)) {
+            sigma[k] *= -1;     // spin flip
+            *E += deltaE;
+            *mu += 2*sigma[k];
+        }
+    }
+}
+
+

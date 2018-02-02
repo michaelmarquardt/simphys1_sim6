@@ -1,5 +1,6 @@
 from numpy import *
 from matplotlib.pyplot import *
+from cising import *
 
 L = 10
 Ts = arange(1.0, 5.1, 0.1)
@@ -82,6 +83,7 @@ def exact_sum(L, Ts):
     return Emeans, mmeans
 
 # Main program
+'''
 print "exact summation"
 Ts = arange(1.0, 5.1, 0.1)
 Emeans, mmeans = exact_sum(4, Ts)
@@ -96,6 +98,7 @@ legend()
 subplot(212, title='Magnetization vs. Temperature')
 plot(Ts, mmeans, 'o-', label='exact')
 legend()
+'''
 
 ##################################################
 ## MONTE CARLO
@@ -105,7 +108,7 @@ def monte_carlo_ising(L, T, num_sweeps):
     beta = 1.0/T
 
     # generate random configuration
-    sigma = random.randint(0, 2, (L, L))
+    sigma = random.randint(0, 2, (L, L), dtype=int32)
     sigma *= 2
     sigma -= 1
 
@@ -114,25 +117,14 @@ def monte_carlo_ising(L, T, num_sweeps):
 
     Es = []
     ms = []
-
+    
+    # Warming up
+    for sweep in range(100):
+        E, mu = spin_flip(beta, E, mu, sigma)
+    
+    # Simulation
     for sweep in range(num_sweeps):
-        for step in range(V):
-            # flip single spin
-            i, j = random.randint(0, L, 2)
-            sigma[i,j] *= -1
-
-            deltaE = -2*sigma[i,j]*(sigma[(i-1)%L, j] +
-                                    sigma[(i+1)%L, j] +
-                                    sigma[i, (j-1)%L] +
-                                    sigma[i, (j+1)%L])
-
-            if random.rand() < exp(-beta*deltaE):
-                # accept move
-                E += deltaE
-                mu += 2*sigma[i,j]
-            else:
-                # reject move, i.e. restore spin
-                sigma[i,j] *= -1
+        E, mu = spin_flip(beta, E, mu, sigma)
 
         Es.append(E/float(V))
         ms.append(abs(mu)/float(V))
@@ -142,13 +134,13 @@ def monte_carlo_ising(L, T, num_sweeps):
 
     Emean, _, Eerr, tauE, _, _, _, _ = compute_act_error(array(Es))
     mmean, _, merr, tauM, _, _, _, _ = compute_act_error(array(ms))
-    print "\rT = {} tau_E = {} tau_M = {} E = {}+/-{} m = {}+/-{}"\
+    print "\rT = {:.1f} tau_E = {:.2f} tau_M = {:.2f} E = {:.3f}+/-{:.3f} m = {:.3f}+/-{:.3f}"\
         .format(T, tauE, tauM, Emean, Eerr, mmean, merr)
 
     return Emean, Eerr, mmean, merr, sigma
 
 # Main program
-for L in [4, 10]:
+for L in [16, 64]:
     print "MC (L={})".format(L)
 
     Emeans = []
