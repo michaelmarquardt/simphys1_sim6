@@ -1,7 +1,19 @@
 from numpy import *
 from matplotlib.pyplot import *
+import matplotlib
 from cising import *
+import argparse
+import pickle 
+import sys, os
 
+# Command line arguments
+parser = argparse.ArgumentParser()
+
+parser.add_argument( '--L', type=int, nargs='+', default=[4, 64], help='--L <L1> <L2> ...\tsystem sizes L to simulate.' )
+
+args = parser.parse_args()
+
+# Beginning of the program
 L = 10
 Ts = arange(1.0, 5.1, 0.1)
 num_sweeps = 1000
@@ -118,10 +130,6 @@ def monte_carlo_ising(L, T, num_sweeps):
     Es = []
     ms = []
     
-    # Warming up
-    for sweep in range(100):
-        E, mu = spin_flip(beta, E, mu, sigma)
-    
     # Simulation
     for sweep in range(num_sweeps):
         E, mu = spin_flip(beta, E, mu, sigma)
@@ -140,9 +148,14 @@ def monte_carlo_ising(L, T, num_sweeps):
     return Emean, Eerr, mmean, merr, sigma
 
 # Main program
-for L in [16, 64]:
+plotname = 'L'
+for L in args.L:
     print "MC (L={})".format(L)
-
+    
+    # Generating names
+    plotname += '_{}'.format(L)
+    datafilename = '../dat/data_L{}'.format(L)
+    
     Emeans = []
     Eerrs = []
     mmeans = []
@@ -156,8 +169,14 @@ for L in [16, 64]:
         mmeans.append(mmean)
         merrs.append(merr)
         sigmas.append(sigma)
-
-    figure(0)    
+        
+    # Write data to file
+    datafile = open(datafilename, 'w')
+    pickle.dump([Emeans, Eerrs, mmeans, merrs, sigma], datafile)
+    datafile.close()
+    
+    # Plot E and mu
+    fig1 = figure(0)    
     subplot(211, title='Energy vs. Temperature')
     errorbar(Ts, Emeans, yerr=Eerrs, fmt='o-', label='MC L={}'.format(L))
     legend()
@@ -165,15 +184,20 @@ for L in [16, 64]:
     subplot(212, title='Magnetization vs. Temperature')
     errorbar(Ts, mmeans, yerr=merrs, fmt='o-', label='MC L={}'.format(L))
     legend()
+    
+    # Plot the final states
+    fig2 = figure('Final states')
+    numplots = len(sigmas)
+    cols = int(ceil(sqrt(numplots)))
+    rows = int(ceil(numplots/float(cols)))
+    for i in range(numplots):
+        subplot(rows, cols, i+1, title='T={}'.format(Ts[i]))
+        axis('off')
+        imshow(sigmas[i], interpolation='nearest')
+    matplotlib.rcParams.update({'font.size': 6})
+    tight_layout()
+    fig2.savefig('../dat/states_L{}.pdf'.format(L))
+    close(fig2)
 
-figure('Final states')
-numplots = len(sigmas)
-cols = int(ceil(sqrt(numplots)))
-rows = int(ceil(numplots/float(cols)))
-for i in range(numplots):
-    subplot(rows, cols, i+1, title='T={}'.format(Ts[i]))
-    axis('off')
-    imshow(sigmas[i], interpolation='nearest')
-
-show()
-
+fig1.savefig('../dat/E_mu_'+plotname+'.pdf')
+close(fig1)
