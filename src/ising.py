@@ -55,7 +55,7 @@ def binder_parameter(ms):
     '''
     computes the binder parameter U=1-1/3*<mu^4>/<mu^2>^2
     '''
-    return 1-1./3.*(ms**4).sum()*(ms**2).sum()**-2
+    return 1-1./3.*(ms**4).mean()*(ms**2).mean()**-2
     
     
 ##################################################
