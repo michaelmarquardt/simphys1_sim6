@@ -50,7 +50,14 @@ def compute_act_error(x):
     err_x = sqrt(xvar/N*2.0*tau_int)
     return xmean, xvar, err_x, tau_int, err_tau, N_eff, \
         array(acfs), array(tau_ints)
-
+        
+def binder_parameter(ms):
+    '''
+    computes the binder parameter U=1-1/3*<mu^4>/<mu^2>^2
+    '''
+    return 1-1./3.*(ms**4).sum()*(ms**2).sum()**-2
+    
+    
 ##################################################
 ## EXACT SUMMATION
 ##################################################
@@ -112,6 +119,7 @@ plot(Ts, mmeans, 'o-', label='exact')
 legend()
 '''
 
+
 ##################################################
 ## MONTE CARLO
 ##################################################
@@ -142,10 +150,11 @@ def monte_carlo_ising(L, T, num_sweeps):
 
     Emean, _, Eerr, tauE, _, _, _, _ = compute_act_error(array(Es))
     mmean, _, merr, tauM, _, _, _, _ = compute_act_error(array(ms))
+    U = binder_parameter(array(ms))
     print "\rT = {:.1f} tau_E = {:.2f} tau_M = {:.2f} E = {:.3f}+/-{:.3f} m = {:.3f}+/-{:.3f}"\
         .format(T, tauE, tauM, Emean, Eerr, mmean, merr)
 
-    return Emean, Eerr, mmean, merr, sigma
+    return Emean, Eerr, mmean, merr, sigma, U
 
 # Main program
 plotname = 'L'
@@ -161,28 +170,34 @@ for L in args.L:
     mmeans = []
     merrs = []
     sigmas = []
+    Us = []
 
     for T in Ts:
-        Emean, Eerr, mmean, merr, sigma = monte_carlo_ising(L, T, num_sweeps)
+        Emean, Eerr, mmean, merr, sigma, U = monte_carlo_ising(L, T, num_sweeps)
         Emeans.append(Emean)
         Eerrs.append(Eerr)
         mmeans.append(mmean)
         merrs.append(merr)
         sigmas.append(sigma)
-        
+        Us.append(U)
+
     # Write data to file
     datafile = open(datafilename, 'w')
-    pickle.dump([Emeans, Eerrs, mmeans, merrs, sigma], datafile)
+    pickle.dump([Emeans, Eerrs, mmeans, merrs, sigma, Us], datafile)
     datafile.close()
     
     # Plot E and mu
     fig1 = figure(0)    
-    subplot(211, title='Energy vs. Temperature')
+    subplot(311, title='Energy vs. Temperature')
     errorbar(Ts, Emeans, yerr=Eerrs, fmt='o-', label='MC L={}'.format(L))
     legend()
 
-    subplot(212, title='Magnetization vs. Temperature')
+    subplot(312, title='Magnetization vs. Temperature')
     errorbar(Ts, mmeans, yerr=merrs, fmt='o-', label='MC L={}'.format(L))
+    legend()
+    
+    subplot(313, title='Binder Parameter vs. Temperature')
+    plot(Ts, Us, 'o-', label='MC L={}'.format(L))
     legend()
     
     # Plot the final states
