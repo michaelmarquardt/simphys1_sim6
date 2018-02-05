@@ -1,0 +1,55 @@
+\section{Implementation in Cython}
+
+In order to make the given program faster one part of the monte\_carlo\_ising() function was implemented in Cython.
+Because of the already efficient numpy operations it is not necessary to implement the functions compute\_energy() and compute\_magnetization() in C.
+The function compute\_act\_error() may be faster in C but as we see later it will not be necessary.\\
+
+The really time intensive part of the program is the trial move.
+In this case it is a spin-flip which is done $L^2$ times, with system size $L\times L$, between the num\_sweeps measurements.\\
+
+In order to make this faster the function spin\_flip() is implemented in Cython.
+The according C-function is called c\_spin\_flip() and can be seen in code block \ref{spfl}.
+The function takes the Temperature in form of beta and the system size L as arguments. 
+Furthermore it uses pointer on the energy E, the magnetization mu and the actual state sigma.\\\
+
+\listfile[MyCStyle]{../src/cising_impl.c}{cising\_impl.c}{31}{44}{Spin flip}{spfl}
+
+In fact the function does nothing different from the original python code, but because of C can only use plane arrays the indices will look different.
+\begin{align}
+	\sigma_{i,j}
+		&\rightarrow \sigma_{i+L\cdot j} = \sigma_k
+		\label{ijk1}\\
+	i
+		&=k\%L 
+		&&(\text{modulo})
+		\label{ijk2}\\
+	j
+		&=k/L
+		&&(\text{integer division})
+		\label{ijk3} 
+\end{align}
+
+This leads to:
+\begin{align}
+\sigma_{i\pm 1,j}
+	&\rightarrow \sigma_{(i\pm 1)\%L+L\cdot j}
+	= \sigma_{(k\pm 1)\%L+k/L\cdot L}
+	\label{ijk4}\\
+\sigma_{i,j\pm 1}
+	&\rightarrow \sigma_{i+\li (j\pm 1)\%L\ri \cdot L}
+	= \sigma_{(k\pm L)\%L^2}
+	\label{ijk5}
+\end{align}
+
+But in C the modulo of negative numbers is defined in a different way than in python and because of this when using the modulo $a\% b$ we have to add $b$ to $a$ to gain $(a+b)\%b$.\\
+
+In order to save disk space no new state sigma is generated but the old one will be overwritten.
+Same for E and mu.
+They need not to be calculated again but can be simply changed by their change for one spin flip.\\
+
+The function can now replace the inner for-loop in monte\_carlo\_ising().\\
+
+\section{Simulation}
+
+In order to make easier simulations ising.py was extended to take the command line parameter \ls{--L <L1> <L2> ...} which takes all system sizes for which you want to simulate as arguments.
+Furthermore the script can now save figures and data.
