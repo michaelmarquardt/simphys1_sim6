@@ -10,6 +10,7 @@ import sys, os
 parser = argparse.ArgumentParser()
 
 parser.add_argument( '--L', type=int, nargs='+', default=[4, 64], help='--L <L1> <L2> ...\tsystem sizes L to simulate.' )
+parser.add_argument( '--T', type=int, nargs='+', default=arange(2.0, 2.42, 0.02), help='--T <T1> <T2> ...\tTemperatures for calculating the Binder parameter.' )
 
 args = parser.parse_args()
 
@@ -139,13 +140,19 @@ def monte_carlo_ising(L, T, num_sweeps):
     ms = []
     
     # Simulation
+    for warmup in range(L*L):
+        E, mu = spin_flip(beta, E, mu, sigma)
+        
+        print "\tT = {} {:5}/{:5} warmup \r".format(T, warmup, L*L),
+        sys.stdout.flush()
+        
     for sweep in range(num_sweeps):
         E, mu = spin_flip(beta, E, mu, sigma)
 
         Es.append(E/float(V))
         ms.append(abs(mu)/float(V))
 
-        print "\tT = {} {:5}/{:5}\r".format(T, sweep, num_sweeps),
+        print "\tT = {} {:5}/{:5}        \r".format(T, sweep, num_sweeps),
         sys.stdout.flush()
 
     Emean, _, Eerr, tauE, _, _, _, _ = compute_act_error(array(Es))
